@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    Scoundrel — A Solo Dungeon-Crawling Card Game
+    Structure: Start screen, gameplay area, game-over overlay.
+    All game logic lives in game.js; all styling in styles.css.
+  -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scoundrel — Dungeon Card Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== START SCREEN ===== -->
+  <div id="start-screen" class="screen active">
+    <div class="start-content">
+      <h1 class="game-title">Scoundrel</h1>
+      <p class="game-subtitle">A Solo Dungeon Crawl</p>
+      <div class="start-card-fan" aria-hidden="true">
+        <div class="fan-card fan-1"></div>
+        <div class="fan-card fan-2"></div>
+        <div class="fan-card fan-3"></div>
+      </div>
+      <button id="start-btn" class="btn btn-primary">Enter the Dungeon</button>
+      <div class="rules-toggle">
+        <button id="rules-btn" class="btn btn-secondary">How to Play</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RULES MODAL ===== -->
+  <div id="rules-modal" class="modal" role="dialog" aria-labelledby="rules-title" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <h2 id="rules-title">How to Play</h2>
+      <div class="rules-body">
+        <section>
+          <h3>Goal</h3>
+          <p>Survive the dungeon by clearing all 44 cards. Your score equals your remaining HP.</p>
+        </section>
+        <section>
+          <h3>Card Types</h3>
+          <ul>
+            <li><strong>Monsters</strong> (<span class="suit-club">&clubs;</span> <span class="suit-spade">&spades;</span>) — Deal damage. Strength = face value (J=11, Q=12, K=13, A=14).</li>
+            <li><strong>Weapons</strong> (<span class="suit-diamond">&diams;</span> 2-10) — Equip to reduce monster damage. Replaces current weapon.</li>
+            <li><strong>Potions</strong> (<span class="suit-heart">&hearts;</span> 2-10) — Heal HP (max 20). Only 1 potion heals per room.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>Each Turn</h3>
+          <ol>
+            <li>4 cards are drawn into a <em>Room</em>.</li>
+            <li><strong>Avoid:</strong> Put all 4 cards on the bottom of the deck. Cannot avoid twice in a row.</li>
+            <li><strong>Face:</strong> Resolve 3 of 4 cards in any order. The 4th card stays for the next room.</li>
+          </ol>
+        </section>
+        <section>
+          <h3>Combat</h3>
+          <p>Without a weapon, you take full damage. With a weapon, damage = monster value - weapon value (min 0).
+             A weapon can only fight monsters with value &le; the last monster it defeated (no limit if unused).</p>
+        </section>
+      </div>
+      <button id="rules-close" class="btn btn-primary">Got It</button>
+    </div>
+  </div>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <div id="game-screen" class="screen">
+
+    <!-- Status Bar -->
+    <header id="status-bar">
+      <div class="status-left">
+        <div id="hp-display" class="status-item" aria-label="Health Points">
+          <div class="hp-vial">
+            <div id="hp-fill" class="hp-fill" style="height:100%"></div>
+            <span id="hp-text" class="hp-text">20</span>
+          </div>
+          <span class="status-label">HP</span>
+        </div>
+      </div>
+      <div class="status-center">
+        <div id="weapon-display" class="status-item weapon-info">
+          <span class="status-label">Weapon</span>
+          <div id="weapon-detail" class="weapon-detail">None</div>
+          <div id="weapon-constraint" class="weapon-constraint"></div>
+        </div>
+      </div>
+      <div class="status-right">
+        <div id="deck-display" class="status-item" aria-label="Cards remaining in dungeon">
+          <div class="deck-icon" aria-hidden="true">
+            <img src="assets/deck.png" alt="" class="deck-thumb">
+            <span id="deck-count" class="deck-count">44</span>
+          </div>
+          <span class="status-label">Dungeon</span>
+        </div>
+        <button id="mute-btn" class="mute-btn" aria-label="Toggle sound" title="Toggle sound">
+          <span class="mute-icon" aria-hidden="true">&#9835;</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Room Area -->
+    <main id="room-area">
+      <div id="room-prompt" class="room-prompt" aria-live="polite">Draw a room to begin...</div>
+      <div id="room-cards" class="room-cards" role="list" aria-label="Room cards">
+        <!-- Cards injected by JS -->
+      </div>
+    </main>
+
+    <!-- Action Area -->
+    <div id="action-area">
+      <button id="avoid-btn" class="btn btn-secondary" disabled aria-label="Avoid this room">
+        Avoid Room
+      </button>
+      <button id="confirm-btn" class="btn btn-primary hidden" aria-label="Confirm selection">
+        Confirm
+      </button>
+    </div>
+
+    <!-- Discard / History Zone -->
+    <footer id="discard-area">
+      <span class="discard-label">Discard</span>
+      <div id="discard-pile" class="discard-pile" aria-label="Recently discarded cards"></div>
+    </footer>
+
+  </div>
+
+  <!-- ===== GAME OVER OVERLAY ===== -->
+  <div id="gameover-overlay" class="screen overlay" role="dialog" aria-labelledby="gameover-title" aria-hidden="true">
+    <div class="overlay-content">
+      <h2 id="gameover-title" class="gameover-title">Defeat</h2>
+      <p id="gameover-message" class="gameover-message"></p>
+      <p class="gameover-score">Score: <span id="gameover-score">0</span></p>
+      <button id="restart-btn" class="btn btn-primary">Descend Again</button>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
