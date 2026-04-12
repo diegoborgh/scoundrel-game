@@ -767,10 +767,12 @@ img { display: block; max-width: 100%; }
 /* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
   :root {
-    --card-w: 192px;
-    --card-h: 271px;
+    --card-w: 140px;
+    --card-h: 198px;
   }
-  .room-cards { max-width: calc(var(--card-w) * 2 + var(--gap-md)); margin: 0 auto; }
+  .room-cards { max-width: calc(var(--card-w) * 2 + var(--gap-sm)); margin: 0 auto; }
+  .card-value-top, .card-value-bottom { font-size: 1.1rem; }
+  .card-suit-symbol { font-size: 0.8rem; }
   #status-bar {
     padding: var(--gap-xs) var(--gap-sm);
     font-size: 0.85rem;
