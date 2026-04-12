@@ -918,10 +918,12 @@ function setupEventListeners() {
   });
 
   // Rules
-  $('#rules-btn').addEventListener('click', () => {
+  const openRules = () => {
     $('#rules-modal').classList.add('active');
     $('#rules-modal').setAttribute('aria-hidden', 'false');
-  });
+  };
+  $('#rules-btn').addEventListener('click', openRules);
+  $('#help-btn').addEventListener('click', openRules);
   $('#rules-close').addEventListener('click', () => {
     $('#rules-modal').classList.remove('active');
     $('#rules-modal').setAttribute('aria-hidden', 'true');

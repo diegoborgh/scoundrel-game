@@ -256,7 +256,11 @@ img { display: block; max-width: 100%; }
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
+  flex: 1;
 }
+.status-left { justify-content: flex-start; }
+.status-center { justify-content: center; }
+.status-right { justify-content: flex-end; }
 .status-label {
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -430,10 +434,6 @@ img { display: block; max-width: 100%; }
     0 0 18px rgba(139,0,0,0.35),
     0 2px 4px rgba(0,0,0,0.9);
 }
-#room-area::after {
-  content: '';
-  flex: 1;
-}
 
 .room-prompt {
   font-size: 1rem;
@@ -605,9 +605,11 @@ img { display: block; max-width: 100%; }
 #action-area {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: var(--gap-md);
   padding: var(--gap-sm) 0;
-  flex-shrink: 0;
+  flex: 1;
+  width: 100%;
 }
 
 /* ===== DISCARD AREA ===== */

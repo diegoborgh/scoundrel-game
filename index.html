@@ -101,6 +101,9 @@
         <button id="mute-btn" class="mute-btn" aria-label="Toggle sound" title="Toggle sound">
           <span class="mute-icon" aria-hidden="true">&#9835;</span>
         </button>
+        <button id="help-btn" class="mute-btn" aria-label="How to play" title="How to play">
+          <span aria-hidden="true">?</span>
+        </button>
       </div>
     </header>
 
@@ -110,17 +113,16 @@
       <div id="room-cards" class="room-cards" role="list" aria-label="Room cards">
         <!-- Cards injected by JS -->
       </div>
+      <!-- Action Area -->
+      <div id="action-area">
+        <button id="avoid-btn" class="btn btn-secondary" disabled aria-label="Avoid this room">
+          Avoid Room
+        </button>
+        <button id="confirm-btn" class="btn btn-primary hidden" aria-label="Confirm selection">
+          Confirm
+        </button>
+      </div>
     </main>
-
-    <!-- Action Area -->
-    <div id="action-area">
-      <button id="avoid-btn" class="btn btn-secondary" disabled aria-label="Avoid this room">
-        Avoid Room
-      </button>
-      <button id="confirm-btn" class="btn btn-primary hidden" aria-label="Confirm selection">
-        Confirm
-      </button>
-    </div>
 
     <!-- Discard / History Zone -->
     <footer id="discard-area">
