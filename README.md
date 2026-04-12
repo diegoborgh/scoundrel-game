@@ -67,5 +67,3 @@ After entering the dungeon, open the browser console for testing tools:
 
 - `devWin()` — Trigger the victory screen
 - `devLose()` — Trigger the defeat screen
-- `devMusic(1-6)` — Preview music tracks
-- `devMusic(0)` — Stop current preview
