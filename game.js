@@ -131,7 +131,7 @@ function drawRoom() {
 }
 
 function canAvoid() {
-  return !state.lastAvoided && state.room.length === CARDS_PER_ROOM;
+  return !state.lastAvoided && state.room.length === CARDS_PER_ROOM && state.resolvedThisRoom === 0;
 }
 
 function avoidRoom() {
@@ -435,6 +435,171 @@ function flashScreen(type) {
   setTimeout(() => el.classList.remove(cls), 500);
 }
 
+function victoryFlavor(hp) {
+  if (hp >= 20) return 'Untouched legend — the dungeon never laid a finger on you.';
+  if (hp >= 15) return 'A masterful descent. Bards will sing of this one.';
+  if (hp >= 10) return 'You conquered the dungeon!';
+  if (hp >= 5)  return 'Bloodied but unbroken. You escaped with scars.';
+  return 'By a single breath — you survived.';
+}
+
+function defeatFlavor(dungeonLeft) {
+  if (dungeonLeft >= 30) return 'The dungeon barely stirred before it claimed you.';
+  if (dungeonLeft >= 15) return 'So close to the depths, yet the shadows took you.';
+  return 'The dungeon claims another soul...';
+}
+
+function animateScoreCountUp(el, target, duration = 900) {
+  const start = performance.now();
+  const from = 0;
+  const delta = target - from;
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(from + delta * eased);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+function launchConfetti() {
+  const canvas = $('#confetti-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const palettes = [
+    ['#ffd76a', '#ffb347', '#ff8c1a'],      // gold
+    ['#ff4d6d', '#ff8fa3', '#ffc2d1'],      // rose
+    ['#7ae7ff', '#4dc3ff', '#2e8bff'],      // azure
+    ['#b6ff7a', '#6cf26c', '#2fbf2f'],      // emerald
+    ['#d89bff', '#b57aff', '#8a4dff'],      // violet
+    ['#ffffff', '#fff6c8', '#ffe27a'],      // white-gold
+  ];
+
+  const rockets = [];
+  const particles = [];
+
+  function spawnRocket() {
+    const palette = palettes[(Math.random() * palettes.length) | 0];
+    const x = W * (0.15 + Math.random() * 0.7);
+    const targetY = H * (0.15 + Math.random() * 0.3);
+    rockets.push({
+      x,
+      y: H + 10 * dpr,
+      vx: (Math.random() - 0.5) * 0.6 * dpr,
+      vy: -(9 + Math.random() * 3) * dpr,
+      targetY,
+      palette,
+      trail: [],
+    });
+  }
+
+  function explode(rocket) {
+    const count = 60 + ((Math.random() * 30) | 0);
+    const speed = (3 + Math.random() * 2) * dpr;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.15;
+      const spd = speed * (0.6 + Math.random() * 0.8);
+      particles.push({
+        x: rocket.x,
+        y: rocket.y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        color: rocket.palette[(Math.random() * rocket.palette.length) | 0],
+        life: 1,
+        decay: 0.012 + Math.random() * 0.012,
+        size: (1.5 + Math.random() * 1.5) * dpr,
+      });
+    }
+  }
+
+  const start = performance.now();
+  const duration = 5000;
+  let lastSpawn = 0;
+  let running = true;
+
+  function frame(now) {
+    if (!running) return;
+    const elapsed = now - start;
+
+    // Fade previous frame for trail effect
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Spawn rockets periodically
+    if (elapsed < duration - 1200 && now - lastSpawn > 280) {
+      spawnRocket();
+      if (Math.random() < 0.4) spawnRocket();
+      lastSpawn = now;
+    }
+
+    // Update + draw rockets
+    for (let i = rockets.length - 1; i >= 0; i--) {
+      const r = rockets[i];
+      r.vy += 0.08 * dpr;
+      r.x += r.vx;
+      r.y += r.vy;
+      r.trail.push({ x: r.x, y: r.y });
+      if (r.trail.length > 8) r.trail.shift();
+
+      // Draw trail
+      for (let j = 0; j < r.trail.length; j++) {
+        const p = r.trail[j];
+        const alpha = j / r.trail.length;
+        ctx.fillStyle = r.palette[0];
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2 * dpr * alpha, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      if (r.y <= r.targetY || r.vy >= 0) {
+        explode(r);
+        rockets.splice(i, 1);
+      }
+    }
+
+    // Update + draw particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += 0.04 * dpr;
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= p.decay;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (elapsed < duration || particles.length > 0 || rockets.length > 0) {
+      requestAnimationFrame(frame);
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.clearRect(0, 0, W, H);
+      running = false;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
 function showGameOver(won) {
   const overlay = $('#gameover-overlay');
   const title = $('#gameover-title');
@@ -442,19 +607,25 @@ function showGameOver(won) {
   const score = $('#gameover-score');
 
   title.textContent = won ? 'Victory' : 'Defeat';
+  // Reassign className to restart the victory-pop animation on repeat views.
   title.className = 'gameover-title ' + (won ? 'victory' : 'defeat');
 
   const s = calculateScore(won);
-  score.textContent = s;
+  score.textContent = '0';
 
-  message.textContent = won
-    ? 'You conquered the dungeon!'
-    : 'The dungeon claims another soul...';
+  message.textContent = won ? victoryFlavor(state.hp) : defeatFlavor(state.dungeon.length);
 
   // Show overlay BEFORE playing audio — don't let an audio error hide the UI.
   overlay.classList.add('active');
   overlay.style.display = 'flex';
   overlay.setAttribute('aria-hidden', 'false');
+
+  if (won) {
+    launchConfetti();
+    setTimeout(() => animateScoreCountUp(score, s), 400);
+  } else {
+    score.textContent = s;
+  }
 
   try {
     Audio.stopAmbient();
@@ -463,6 +634,9 @@ function showGameOver(won) {
     console.warn('Audio failed in gameover:', err);
   }
 }
+
+window.devWin = () => showGameOver(true);
+window.devLose = () => showGameOver(false);
 
 // ============================================================
 // 6. AUDIO (Web Audio API procedural SFX)
@@ -587,18 +761,62 @@ const Audio = (() => {
   }
 
   function sfxVictory() {
-    // Ascending arpeggio
-    [440, 554, 659, 880].forEach((freq, i) => {
+    // Layered fanfare: triumphant arpeggio + sustained chord + shimmer
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    // Ascending heroic arpeggio (C major triad up to high C, then D)
+    const arp = [523, 659, 784, 1047, 1175];
+    arp.forEach((freq, i) => {
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
+      osc.type = 'triangle';
       osc.frequency.value = freq;
       const gain = ctx.createGain();
-      const t = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.1, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-      osc.connect(gain).connect(ctx.destination);
+      const t = t0 + i * 0.1;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain).connect(master);
       osc.start(t);
-      osc.stop(t + 0.4);
+      osc.stop(t + 0.5);
+    });
+
+    // Sustained chord swells in after arpeggio (C + E + G + high C)
+    const chord = [261, 329, 392, 523];
+    const chordStart = t0 + 0.5;
+    const chordDur = 2.0;
+    chord.forEach(freq => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 2000;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, chordStart);
+      gain.gain.linearRampToValueAtTime(0.05, chordStart + 0.3);
+      gain.gain.linearRampToValueAtTime(0.04, chordStart + chordDur - 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.0001, chordStart + chordDur);
+      osc.connect(filt).connect(gain).connect(master);
+      osc.start(chordStart);
+      osc.stop(chordStart + chordDur);
+    });
+
+    // Shimmer: high sine sparkles
+    [0.6, 0.85, 1.1, 1.4, 1.7].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 1568 + i * 200;
+      const gain = ctx.createGain();
+      const t = t0 + delay;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      osc.connect(gain).connect(master);
+      osc.start(t);
+      osc.stop(t + 0.3);
     });
   }
 
