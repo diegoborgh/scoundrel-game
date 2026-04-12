@@ -436,7 +436,7 @@ img { display: block; max-width: 100%; }
 }
 
 .room-prompt {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--parchment);
   text-align: center;
