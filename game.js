@@ -386,20 +386,12 @@ function createCardElement(card, index) {
 
 function renderActions() {
   const avoidBtn = $('#avoid-btn');
-  const confirmBtn = $('#confirm-btn');
-
   if (state.phase === 'room') {
     avoidBtn.disabled = !canAvoid();
     avoidBtn.classList.remove('hidden');
   } else {
     avoidBtn.disabled = true;
     avoidBtn.classList.add('hidden');
-  }
-
-  if (state.selectedIndex !== null && state.phase === 'room') {
-    confirmBtn.classList.remove('hidden');
-  } else {
-    confirmBtn.classList.add('hidden');
   }
 }
 
@@ -1457,27 +1449,26 @@ const Audio = (() => {
 // 7. EVENT HANDLING
 // ============================================================
 
+const canHover = window.matchMedia('(hover: hover)').matches;
+
 function handleCardClick(index) {
   if (state.phase !== 'room') return;
   if (state.room[index] === null) return;
 
   Audio.play('click');
 
-  if (state.selectedIndex === index) {
-    // Second click on same card — resolve it
+  if (canHover) {
     resolveCard(index);
     return;
   }
 
-  // Select this card
+  if (state.selectedIndex === index) {
+    resolveCard(index);
+    return;
+  }
+
   state.selectedIndex = index;
   renderAll();
-}
-
-function handleConfirm() {
-  if (state.selectedIndex !== null) {
-    resolveCard(state.selectedIndex);
-  }
 }
 
 function setupEventListeners() {
@@ -1525,7 +1516,6 @@ function setupEventListeners() {
   $('#avoid-btn').addEventListener('click', avoidRoom);
 
   // Confirm
-  $('#confirm-btn').addEventListener('click', handleConfirm);
 
   // Restart
   $('#restart-btn').addEventListener('click', () => {
