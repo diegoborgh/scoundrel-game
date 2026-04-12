@@ -1287,7 +1287,11 @@ function handleCardClick(index) {
   }
 
   state.selectedIndex = index;
-  renderAll();
+  const container = $('#room-cards');
+  const prev = container.querySelector('.card.selected');
+  if (prev) prev.classList.remove('selected');
+  const next = container.querySelector(`.card[data-index="${index}"]`);
+  if (next) next.classList.add('selected');
 }
 
 function setupEventListeners() {
