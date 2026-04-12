@@ -620,9 +620,11 @@ function showGameOver(won) {
   }
 
   try {
+    Audio.init();
     Audio.stopAmbient();
     Audio.play(won ? 'victory' : 'defeat');
-    if (!won) Audio.startDefeatMusic();
+    if (won) Audio.startVictoryMusic();
+    else Audio.startDefeatMusic();
   } catch (err) {
     console.warn('Audio failed in gameover:', err);
   }
@@ -953,10 +955,153 @@ window.devLose = () => showGameOver(false);
     return () => { clearTimeout(stopId); master.disconnect(); };
   }
 
+  // 6: Triumphant victory — heroic fanfare building to a majestic climax
+  function music6() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.6;
+    master.connect(ctx.destination);
+    const bpm = 152;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Heroic brass fanfare — triangle waves for warmth
+    const fanfare = [
+      // Opening call
+      [262, 0, 1], [330, 1, 0.5], [392, 1.5, 0.5], [523, 2, 2],
+      [494, 4, 0.5], [523, 4.5, 0.5], [587, 5, 1.5], [523, 6.5, 0.5],
+      // Rising phrase
+      [392, 7, 1], [440, 8, 0.5], [494, 8.5, 0.5], [523, 9, 1],
+      [587, 10, 0.5], [659, 10.5, 0.5], [784, 11, 2],
+      // Triumphant resolution
+      [659, 13, 0.5], [784, 13.5, 0.5], [880, 14, 1], [784, 15, 0.5], [880, 15.5, 0.5],
+      [1047, 16, 3],
+      // Gentle ending
+      [880, 19, 1], [784, 20, 1], [659, 21, 1], [523, 22, 3],
+    ];
+    fanfare.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'square';
+      osc2.frequency.value = f * 1.002;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 2200;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      const dur = d * beat * 0.92;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
+      g.gain.setValueAtTime(0.12, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(filt);
+      osc2.connect(filt);
+      filt.connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+      osc2.start(t);
+      osc2.stop(t + dur + 0.05);
+    });
+
+    // Bass foundation — octave below melody roots
+    const bass = [
+      [131, 0, 4], [147, 4, 3], [131, 7, 3],
+      [147, 10, 1], [165, 11, 2], [196, 13, 3],
+      [262, 16, 3], [220, 19, 2], [196, 21, 1], [131, 22, 4],
+    ];
+    bass.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = f;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 400;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      const dur = d * beat * 0.9;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+      g.gain.setValueAtTime(0.1, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(filt).connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+    });
+
+    // Harmony pads — sustained chords that swell
+    const chords = [
+      [[262, 330, 392], 0, 7],
+      [[294, 349, 440], 7, 4],
+      [[330, 392, 494], 11, 5],
+      [[262, 330, 392, 523], 16, 5],
+      [[220, 330, 440], 21, 5],
+    ];
+    chords.forEach(([freqs, b, d]) => {
+      freqs.forEach(f => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f;
+        const filt = ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = 900;
+        const g = ctx.createGain();
+        const t = t0 + b * beat;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.03, t + beat * 1.5);
+        g.gain.setValueAtTime(0.03, t + d * beat - beat * 1.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d * beat);
+        osc.connect(filt).connect(g).connect(master);
+        osc.start(t);
+        osc.stop(t + d * beat + 0.1);
+      });
+    });
+
+    // Snare-like hits on strong beats
+    const hits = [0, 2, 4, 7, 9, 11, 13, 16, 19, 22];
+    hits.forEach(b => {
+      const t = t0 + b * beat;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'highpass';
+      filt.frequency.value = 2000;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.15, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+      src.connect(filt).connect(g).connect(master);
+      src.start(t);
+      src.stop(t + 0.07);
+    });
+
+    // Sparkle shimmer at the climax (beat 16)
+    [0, 0.15, 0.3, 0.5, 0.7, 0.9, 1.2].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 2000 + i * 300;
+      const g = ctx.createGain();
+      const t = t0 + 16 * beat + delay;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      osc.connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    });
+
+    const dur = 26 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
   window.devMusic = (n) => {
     if (previewStop) { previewStop(); previewStop = null; }
-    const fns = { 1: music1, 2: music2, 3: music3, 4: music4, 5: music5 };
-    if (!fns[n]) { console.log('Usage: devMusic(1-5). 1=Dark march, 2=Adventure, 3=Tavern waltz, 4=Gothic organ, 5=Dark pulsing synth'); return; }
+    const fns = { 1: music1, 2: music2, 3: music3, 4: music4, 5: music5, 6: music6 };
+    if (!fns[n]) { console.log('Usage: devMusic(1-6). 1=Dark march, 2=Adventure, 3=Tavern waltz, 4=Gothic organ, 5=Dark pulsing synth, 6=Triumphant victory'); return; }
     console.log(`Playing preview ${n}... call devMusic(0) to stop.`);
     previewStop = fns[n]();
   };
@@ -1395,6 +1540,154 @@ const Audio = (() => {
     defeatLoopId = setTimeout(() => { if (defeatMaster) playDefeatLoop(); }, loopDur - 100);
   }
 
+  let victoryMaster = null;
+  let victoryLoopId = null;
+
+  function playVictoryLoop() {
+    if (!initialized || muted || !victoryMaster) return;
+    ensureCtx();
+    const bpm = 152;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    const fanfare = [
+      [262, 0, 1], [330, 1, 0.5], [392, 1.5, 0.5], [523, 2, 2],
+      [494, 4, 0.5], [523, 4.5, 0.5], [587, 5, 1.5], [523, 6.5, 0.5],
+      [392, 7, 1], [440, 8, 0.5], [494, 8.5, 0.5], [523, 9, 1],
+      [587, 10, 0.5], [659, 10.5, 0.5], [784, 11, 2],
+      [659, 13, 0.5], [784, 13.5, 0.5], [880, 14, 1], [784, 15, 0.5], [880, 15.5, 0.5],
+      [1047, 16, 3],
+      [880, 19, 1], [784, 20, 1], [659, 21, 1], [523, 22, 3],
+    ];
+    fanfare.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'square';
+      osc2.frequency.value = f * 1.002;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 2200;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      const dur = d * beat * 0.92;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
+      g.gain.setValueAtTime(0.12, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(filt);
+      osc2.connect(filt);
+      filt.connect(g).connect(victoryMaster);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+      osc2.start(t);
+      osc2.stop(t + dur + 0.05);
+    });
+
+    const bass = [
+      [131, 0, 4], [147, 4, 3], [131, 7, 3],
+      [147, 10, 1], [165, 11, 2], [196, 13, 3],
+      [262, 16, 3], [220, 19, 2], [196, 21, 1], [131, 22, 4],
+    ];
+    bass.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = f;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 400;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      const dur = d * beat * 0.9;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+      g.gain.setValueAtTime(0.1, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(filt).connect(g).connect(victoryMaster);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+    });
+
+    const chords = [
+      [[262, 330, 392], 0, 7],
+      [[294, 349, 440], 7, 4],
+      [[330, 392, 494], 11, 5],
+      [[262, 330, 392, 523], 16, 5],
+      [[220, 330, 440], 21, 5],
+    ];
+    chords.forEach(([freqs, b, d]) => {
+      freqs.forEach(f => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f;
+        const filt = ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = 900;
+        const g = ctx.createGain();
+        const t = t0 + b * beat;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.03, t + beat * 1.5);
+        g.gain.setValueAtTime(0.03, t + d * beat - beat * 1.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d * beat);
+        osc.connect(filt).connect(g).connect(victoryMaster);
+        osc.start(t);
+        osc.stop(t + d * beat + 0.1);
+      });
+    });
+
+    const hits = [0, 2, 4, 7, 9, 11, 13, 16, 19, 22];
+    hits.forEach(b => {
+      const t = t0 + b * beat;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'highpass';
+      filt.frequency.value = 2000;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.15, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+      src.connect(filt).connect(g).connect(victoryMaster);
+      src.start(t);
+      src.stop(t + 0.07);
+    });
+
+    [0, 0.15, 0.3, 0.5, 0.7, 0.9, 1.2].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 2000 + i * 300;
+      const g = ctx.createGain();
+      const t = t0 + 16 * beat + delay;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      osc.connect(g).connect(victoryMaster);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    });
+
+    const loopDur = 26 * beat * 1000;
+    victoryLoopId = setTimeout(() => { if (victoryMaster) playVictoryLoop(); }, loopDur - 100);
+  }
+
+  function startVictoryMusic() {
+    init();
+    ensureCtx();
+    if (victoryMaster) return;
+    victoryMaster = ctx.createGain();
+    victoryMaster.gain.value = 0.6;
+    victoryMaster.connect(ctx.destination);
+    playVictoryLoop();
+  }
+
+  function stopVictoryMusic() {
+    if (victoryLoopId) { clearTimeout(victoryLoopId); victoryLoopId = null; }
+    if (victoryMaster) { victoryMaster.disconnect(); victoryMaster = null; }
+  }
+
   function startDefeatMusic() {
     init();
     ensureCtx();
@@ -1442,7 +1735,7 @@ const Audio = (() => {
     return muted;
   }
 
-  return { init, play, startAmbient, stopAmbient, startTitleMusic, stopTitleMusic, startDefeatMusic, stopDefeatMusic, toggleMute, get muted() { return muted; }, get ctx() { ensureCtx(); return ctx; } };
+  return { init, play, startAmbient, stopAmbient, startTitleMusic, stopTitleMusic, startVictoryMusic, stopVictoryMusic, startDefeatMusic, stopDefeatMusic, toggleMute, get muted() { return muted; }, get ctx() { ensureCtx(); return ctx; } };
 })();
 
 // ============================================================
@@ -1519,6 +1812,7 @@ function setupEventListeners() {
 
   // Restart
   $('#restart-btn').addEventListener('click', () => {
+    Audio.stopVictoryMusic();
     Audio.stopDefeatMusic();
     const overlay = $('#gameover-overlay');
     overlay.classList.remove('active');
