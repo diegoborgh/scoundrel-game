@@ -786,8 +786,6 @@ img { display: block; max-width: 100%; }
   .mute-btn { width: 30px; height: 30px; font-size: 0.9rem; }
   .room-prompt { font-size: 0.85rem; }
   .room-cards { gap: var(--gap-sm); }
-  .card-value-top, .card-value-bottom { font-size: 1rem; }
-  .card-suit-symbol { font-size: 0.72rem; }
   .card-preview { display: none; } /* no hover on touch */
   .btn { padding: 10px 20px; font-size: 0.88rem; }
   #action-area { gap: var(--gap-sm); }

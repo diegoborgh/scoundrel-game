@@ -630,6 +630,7 @@ function showGameOver(won) {
   try {
     Audio.stopAmbient();
     Audio.play(won ? 'victory' : 'defeat');
+    if (!won) Audio.startDefeatMusic();
   } catch (err) {
     console.warn('Audio failed in gameover:', err);
   }
@@ -637,6 +638,337 @@ function showGameOver(won) {
 
 window.devWin = () => showGameOver(true);
 window.devLose = () => showGameOver(false);
+
+// ============================================================
+// 8-BIT MUSIC PREVIEWS (dev console: devMusic(1) through devMusic(4))
+// ============================================================
+(() => {
+  let previewStop = null;
+
+  function getCtx() {
+    return Audio.ctx;
+  }
+
+  function playNote(ctx, dest, freq, start, dur, type = 'square', vol = 0.08) {
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol, start);
+    g.gain.setValueAtTime(vol * 0.7, start + dur * 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur - 0.01);
+    osc.connect(g).connect(dest);
+    osc.start(start);
+    osc.stop(start + dur);
+  }
+
+  // 1: Dark dungeon march — D minor, slow, ominous
+  function music1() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.6;
+    master.connect(ctx.destination);
+    const bpm = 90;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Bass line (pulse wave via square)
+    const bass = [147, 147, 175, 175, 131, 131, 139, 147,
+                  147, 147, 175, 175, 131, 131, 139, 147];
+    bass.forEach((f, i) => playNote(ctx, master, f, t0 + i * beat, beat * 0.9, 'square', 0.1));
+
+    // Melody — D minor ominous phrases
+    const melody = [
+      [587, 0, 2], [554, 2, 1], [523, 3, 1],
+      [494, 4, 2], [440, 6, 1], [466, 7, 0.5], [440, 7.5, 0.5],
+      [392, 8, 2], [440, 10, 1], [494, 11, 1],
+      [523, 12, 1.5], [494, 13.5, 0.5], [440, 14, 1], [392, 15, 1],
+    ];
+    melody.forEach(([f, b, d]) => playNote(ctx, master, f, t0 + b * beat, d * beat * 0.95, 'square', 0.07));
+
+    // Percussion — noise hits on beat
+    for (let i = 0; i < 16; i++) {
+      if (i % 2 === 0) {
+        const t = t0 + i * beat;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        src.connect(g).connect(master);
+        src.start(t);
+        src.stop(t + 0.06);
+      }
+    }
+
+    const dur = 16 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
+  // 2: Chiptune adventure — C major, upbeat NES-style
+  function music2() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.6;
+    master.connect(ctx.destination);
+    const bpm = 140;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Bass — bouncy octave pattern
+    const bass = [131, 196, 131, 196, 147, 220, 147, 220,
+                  165, 247, 165, 247, 131, 196, 175, 196];
+    bass.forEach((f, i) => playNote(ctx, master, f, t0 + i * beat, beat * 0.75, 'square', 0.09));
+
+    // Melody — bright and heroic
+    const melody = [
+      [523, 0, 0.75], [587, 0.75, 0.75], [659, 1.5, 1.5],
+      [587, 3, 0.5], [659, 3.5, 0.5], [784, 4, 1], [659, 5, 0.5], [587, 5.5, 0.5],
+      [523, 6, 1], [494, 7, 0.5], [523, 7.5, 0.5],
+      [587, 8, 1.5], [523, 9.5, 0.5], [494, 10, 1], [440, 11, 1],
+      [523, 12, 1], [587, 13, 0.5], [523, 13.5, 0.5], [494, 14, 0.5], [440, 14.5, 0.5], [392, 15, 1],
+    ];
+    melody.forEach(([f, b, d]) => playNote(ctx, master, f, t0 + b * beat, d * beat * 0.9, 'square', 0.07));
+
+    // Triangle wave harmony
+    const harmony = [
+      [330, 0, 2], [349, 2, 2], [392, 4, 2], [330, 6, 2],
+      [349, 8, 2], [330, 10, 2], [294, 12, 2], [262, 14, 2],
+    ];
+    harmony.forEach(([f, b, d]) => playNote(ctx, master, f, t0 + b * beat, d * beat * 0.9, 'triangle', 0.05));
+
+    const dur = 16 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
+  // 3: Mysterious tavern — A minor waltz, eerie and whimsical
+  function music3() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.6;
+    master.connect(ctx.destination);
+    const bpm = 108;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Waltz bass: beat 1 strong, beats 2-3 lighter
+    const bassPattern = [
+      [110, 0], [165, 1], [165, 2],
+      [131, 3], [196, 4], [196, 5],
+      [117, 6], [175, 7], [175, 8],
+      [110, 9], [165, 10], [165, 11],
+      [131, 12], [196, 13], [196, 14],
+      [117, 15], [175, 16], [139, 17],
+    ];
+    bassPattern.forEach(([f, b]) => {
+      const vol = b % 3 === 0 ? 0.1 : 0.06;
+      playNote(ctx, master, f, t0 + b * beat, beat * 0.8, 'square', vol);
+    });
+
+    // Melody — minor, lilting, eerie
+    const melody = [
+      [440, 0, 1.5], [494, 1.5, 0.5], [523, 2, 1],
+      [494, 3, 1], [440, 4, 0.5], [415, 4.5, 0.5], [392, 5, 1],
+      [349, 6, 1.5], [392, 7.5, 0.5], [440, 8, 1],
+      [415, 9, 2], [392, 11, 1],
+      [349, 12, 1], [330, 13, 0.5], [349, 13.5, 0.5], [392, 14, 1],
+      [440, 15, 1.5], [415, 16.5, 0.5], [392, 17, 1],
+    ];
+    melody.forEach(([f, b, d]) => playNote(ctx, master, f, t0 + b * beat, d * beat * 0.9, 'square', 0.07));
+
+    // Arpeggiated triangle chords
+    const arps = [
+      [220, 0.33], [262, 0.66], [330, 1],
+      [262, 3.33], [330, 3.66], [392, 4],
+      [233, 6.33], [294, 6.66], [349, 7],
+      [220, 9.33], [262, 9.66], [330, 10],
+      [262, 12.33], [330, 12.66], [392, 13],
+      [233, 15.33], [294, 15.66], [349, 16],
+    ];
+    arps.forEach(([f, b]) => playNote(ctx, master, f, t0 + b * beat, beat * 0.6, 'triangle', 0.04));
+
+    const dur = 18 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
+  // 4: Gothic organ — D minor arpeggios, church organ square waves
+  function music4() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.6;
+    master.connect(ctx.destination);
+    const bpm = 72;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Organ arpeggios — sustained, overlapping
+    const arps = [
+      // Dm
+      [147, 0, 3], [220, 0.5, 2.5], [294, 1, 2], [349, 1.5, 1.5],
+      // Bb
+      [117, 3, 3], [175, 3.5, 2.5], [233, 4, 2], [294, 4.5, 1.5],
+      // Gm
+      [196, 6, 3], [233, 6.5, 2.5], [294, 7, 2], [392, 7.5, 1.5],
+      // A (dominant)
+      [110, 9, 3], [165, 9.5, 2.5], [220, 10, 2], [277, 10.5, 1.5],
+      // Dm again
+      [147, 12, 3], [220, 12.5, 2.5], [294, 13, 2], [349, 13.5, 1.5],
+      // C
+      [131, 15, 3], [196, 15.5, 2.5], [262, 16, 2], [330, 16.5, 1.5],
+      // Bb → A resolution
+      [117, 18, 2], [175, 18.5, 1.5], [233, 19, 1],
+      [110, 20, 4], [165, 20.5, 3.5], [220, 21, 3], [277, 21.5, 2.5],
+    ];
+    arps.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = f;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.value = 1200;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.06, t + 0.15);
+      g.gain.setValueAtTime(0.06, t + d * beat * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d * beat);
+      osc.connect(filt).connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + d * beat + 0.05);
+    });
+
+    // Deep pedal bass
+    const pedals = [
+      [73.5, 0, 3], [58.5, 3, 3], [98, 6, 3], [55, 9, 3],
+      [73.5, 12, 3], [65.5, 15, 3], [58.5, 18, 2], [55, 20, 4],
+    ];
+    pedals.forEach(([f, b, d]) => {
+      playNote(ctx, master, f, t0 + b * beat, d * beat * 0.95, 'sawtooth', 0.08);
+    });
+
+    const dur = 24 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
+  // 5: Dark pulsing synth — slow atmospheric arpeggio, Stranger Things vibe
+  function music5() {
+    const ctx = getCtx();
+    const master = ctx.createGain();
+    master.gain.value = 0.55;
+    master.connect(ctx.destination);
+    const bpm = 160;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    // Pulsing arpeggio pattern — C minor feel, repeating
+    const arpNotes = [
+      131, 196, 262, 196, 311, 262, 196, 262,
+      131, 196, 262, 196, 311, 262, 196, 262,
+      117, 175, 233, 175, 294, 233, 175, 233,
+      117, 175, 233, 175, 294, 233, 175, 233,
+      104, 156, 208, 156, 262, 208, 156, 208,
+      104, 156, 208, 156, 262, 208, 156, 208,
+      110, 165, 220, 165, 277, 220, 165, 220,
+      110, 165, 220, 165, 277, 220, 165, 220,
+    ];
+
+    // Main pulsing synth — detuned square waves through low-pass
+    arpNotes.forEach((f, i) => {
+      const t = t0 + i * beat;
+      // Osc 1
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'square';
+      osc1.frequency.value = f;
+      // Osc 2 — slightly detuned for warmth
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sawtooth';
+      osc2.frequency.value = f * 1.003;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.setValueAtTime(600, t);
+      filt.frequency.linearRampToValueAtTime(1100, t + beat * 0.3);
+      filt.frequency.exponentialRampToValueAtTime(400, t + beat * 0.9);
+      filt.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+      g.gain.setValueAtTime(0.1, t + beat * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 0.95);
+      osc1.connect(filt);
+      osc2.connect(filt);
+      filt.connect(g).connect(master);
+      osc1.start(t);
+      osc1.stop(t + beat);
+      osc2.start(t);
+      osc2.stop(t + beat);
+    });
+
+    // Deep sub bass — one per chord change (every 8 beats)
+    const subs = [
+      [65.5, 0], [58.5, 16], [52, 32], [55, 48],
+    ];
+    subs.forEach(([f, b]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.18, t + beat * 2);
+      g.gain.setValueAtTime(0.15, t + beat * 14);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 16);
+      osc.connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + beat * 16 + 0.1);
+    });
+
+    // Atmospheric pad — very quiet high strings
+    const padChords = [
+      [[262, 311, 392], 0, 16],
+      [[233, 294, 349], 16, 16],
+      [[208, 262, 311], 32, 16],
+      [[220, 277, 330], 48, 16],
+    ];
+    padChords.forEach(([freqs, b, d]) => {
+      freqs.forEach(f => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f * 2;
+        const filt = ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = 800;
+        const g = ctx.createGain();
+        const t = t0 + b * beat;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.015, t + beat * 4);
+        g.gain.setValueAtTime(0.015, t + d * beat - beat * 3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d * beat);
+        osc.connect(filt).connect(g).connect(master);
+        osc.start(t);
+        osc.stop(t + d * beat + 0.1);
+      });
+    });
+
+    const dur = 64 * beat + 0.5;
+    const stopId = setTimeout(() => { master.disconnect(); }, dur * 1000);
+    return () => { clearTimeout(stopId); master.disconnect(); };
+  }
+
+  window.devMusic = (n) => {
+    if (previewStop) { previewStop(); previewStop = null; }
+    const fns = { 1: music1, 2: music2, 3: music3, 4: music4, 5: music5 };
+    if (!fns[n]) { console.log('Usage: devMusic(1-5). 1=Dark march, 2=Adventure, 3=Tavern waltz, 4=Gothic organ, 5=Dark pulsing synth'); return; }
+    console.log(`Playing preview ${n}... call devMusic(0) to stop.`);
+    previewStop = fns[n]();
+  };
+})();
 
 // ============================================================
 // 6. AUDIO (Web Audio API procedural SFX)
@@ -712,18 +1044,63 @@ const Audio = (() => {
   }
 
   function sfxEquip() {
-    // Metallic ring — high sine with quick decay
-    const dur = 0.3;
-    const osc = ctx.createOscillator();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1200, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + dur);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + dur);
+    // Heavy blade clang — deep resonant strike with weighty low-end body
+    const t0 = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = 0.25;
+    master.connect(ctx.destination);
+
+    // Low thump — the weight of the blade landing
+    const thump = ctx.createOscillator();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(120, t0);
+    thump.frequency.exponentialRampToValueAtTime(55, t0 + 0.25);
+    const thumpGain = ctx.createGain();
+    thumpGain.gain.setValueAtTime(0.0001, t0);
+    thumpGain.gain.exponentialRampToValueAtTime(0.5, t0 + 0.005);
+    thumpGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.35);
+    thump.connect(thumpGain).connect(master);
+    thump.start(t0);
+    thump.stop(t0 + 0.4);
+
+    // Low inharmonic partials — heavy, resonant clang body
+    const partials = [
+      { freq: 220, amp: 0.22, decay: 1.4 },
+      { freq: 340, amp: 0.16, decay: 1.2 },
+      { freq: 520, amp: 0.11, decay: 1.0 },
+      { freq: 780, amp: 0.07, decay: 0.8 },
+      { freq: 1150, amp: 0.04, decay: 0.6 },
+    ];
+    partials.forEach(p => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(p.freq * 1.015, t0);
+      osc.frequency.exponentialRampToValueAtTime(p.freq, t0 + 0.15);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(p.amp, t0 + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + p.decay);
+      osc.connect(g).connect(master);
+      osc.start(t0);
+      osc.stop(t0 + p.decay + 0.05);
+    });
+
+    // Noise transient — metallic impact grit
+    const nbuf = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+    const nd = nbuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1);
+    const nsrc = ctx.createBufferSource();
+    nsrc.buffer = nbuf;
+    const nfilt = ctx.createBiquadFilter();
+    nfilt.type = 'bandpass';
+    nfilt.frequency.value = 1800;
+    nfilt.Q.value = 1.2;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.35, t0);
+    ng.gain.exponentialRampToValueAtTime(0.001, t0 + 0.08);
+    nsrc.connect(nfilt).connect(ng).connect(master);
+    nsrc.start(t0);
+    nsrc.stop(t0 + 0.08);
   }
 
   function sfxPotion() {
@@ -848,6 +1225,199 @@ const Audio = (() => {
     osc.stop(ctx.currentTime + 0.06);
   }
 
+  let titleMaster = null;
+  let titleLoopId = null;
+
+  function playTitleLoop() {
+    if (!initialized || muted || !titleMaster) return;
+    ensureCtx();
+    const bpm = 160;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.05;
+
+    const arpNotes = [
+      131, 196, 262, 196, 311, 262, 196, 262,
+      131, 196, 262, 196, 311, 262, 196, 262,
+      117, 175, 233, 175, 294, 233, 175, 233,
+      117, 175, 233, 175, 294, 233, 175, 233,
+      104, 156, 208, 156, 262, 208, 156, 208,
+      104, 156, 208, 156, 262, 208, 156, 208,
+      110, 165, 220, 165, 277, 220, 165, 220,
+      110, 165, 220, 165, 277, 220, 165, 220,
+    ];
+
+    arpNotes.forEach((f, i) => {
+      const t = t0 + i * beat;
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'square';
+      osc1.frequency.value = f;
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sawtooth';
+      osc2.frequency.value = f * 1.003;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'lowpass';
+      filt.frequency.setValueAtTime(600, t);
+      filt.frequency.linearRampToValueAtTime(1100, t + beat * 0.3);
+      filt.frequency.exponentialRampToValueAtTime(400, t + beat * 0.9);
+      filt.Q.value = 4;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.015);
+      g.gain.setValueAtTime(0.1, t + beat * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 0.95);
+      osc1.connect(filt);
+      osc2.connect(filt);
+      filt.connect(g).connect(titleMaster);
+      osc1.start(t);
+      osc1.stop(t + beat);
+      osc2.start(t);
+      osc2.stop(t + beat);
+    });
+
+    const subs = [[65.5, 0], [58.5, 16], [52, 32], [55, 48]];
+    subs.forEach(([f, b]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.18, t + beat * 2);
+      g.gain.setValueAtTime(0.15, t + beat * 14);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 16);
+      osc.connect(g).connect(titleMaster);
+      osc.start(t);
+      osc.stop(t + beat * 16 + 0.1);
+    });
+
+    const padChords = [
+      [[262, 311, 392], 0, 16],
+      [[233, 294, 349], 16, 16],
+      [[208, 262, 311], 32, 16],
+      [[220, 277, 330], 48, 16],
+    ];
+    padChords.forEach(([freqs, b, d]) => {
+      freqs.forEach(f => {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f * 2;
+        const filt = ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.value = 800;
+        const g = ctx.createGain();
+        const t = t0 + b * beat;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.015, t + beat * 4);
+        g.gain.setValueAtTime(0.015, t + d * beat - beat * 3);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d * beat);
+        osc.connect(filt).connect(g).connect(titleMaster);
+        osc.start(t);
+        osc.stop(t + d * beat + 0.1);
+      });
+    });
+
+    const loopDur = 64 * beat * 1000;
+    titleLoopId = setTimeout(() => { if (titleMaster) playTitleLoop(); }, loopDur - 100);
+  }
+
+  function startTitleMusic() {
+    if (!initialized) return;
+    ensureCtx();
+    if (titleMaster) return;
+    titleMaster = ctx.createGain();
+    titleMaster.gain.value = 0.55;
+    titleMaster.connect(ctx.destination);
+    playTitleLoop();
+  }
+
+  function stopTitleMusic() {
+    if (titleLoopId) { clearTimeout(titleLoopId); titleLoopId = null; }
+    if (titleMaster) { titleMaster.disconnect(); titleMaster = null; }
+  }
+
+  let defeatMaster = null;
+  let defeatLoopId = null;
+
+  function playDefeatLoop() {
+    if (!initialized || muted || !defeatMaster) return;
+    ensureCtx();
+    const bpm = 90;
+    const beat = 60 / bpm;
+    const t0 = ctx.currentTime + 0.1;
+
+    const bass = [147, 147, 175, 175, 131, 131, 139, 147,
+                  147, 147, 175, 175, 131, 131, 139, 147];
+    bass.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = f;
+      const g = ctx.createGain();
+      const t = t0 + i * beat;
+      g.gain.setValueAtTime(0.1, t);
+      g.gain.setValueAtTime(0.1 * 0.7, t + beat * 0.9 * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 0.9 - 0.01);
+      osc.connect(g).connect(defeatMaster);
+      osc.start(t);
+      osc.stop(t + beat * 0.9);
+    });
+
+    const melody = [
+      [587, 0, 2], [554, 2, 1], [523, 3, 1],
+      [494, 4, 2], [440, 6, 1], [466, 7, 0.5], [440, 7.5, 0.5],
+      [392, 8, 2], [440, 10, 1], [494, 11, 1],
+      [523, 12, 1.5], [494, 13.5, 0.5], [440, 14, 1], [392, 15, 1],
+    ];
+    melody.forEach(([f, b, d]) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'square';
+      osc.frequency.value = f;
+      const g = ctx.createGain();
+      const t = t0 + b * beat;
+      const dur = d * beat * 0.95;
+      g.gain.setValueAtTime(0.07, t);
+      g.gain.setValueAtTime(0.07 * 0.7, t + dur * 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur - 0.01);
+      osc.connect(g).connect(defeatMaster);
+      osc.start(t);
+      osc.stop(t + dur);
+    });
+
+    for (let i = 0; i < 16; i++) {
+      if (i % 2 === 0) {
+        const t = t0 + i * beat;
+        const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        src.connect(g).connect(defeatMaster);
+        src.start(t);
+        src.stop(t + 0.06);
+      }
+    }
+
+    const loopDur = 16 * beat * 1000;
+    defeatLoopId = setTimeout(() => { if (defeatMaster) playDefeatLoop(); }, loopDur - 100);
+  }
+
+  function startDefeatMusic() {
+    init();
+    ensureCtx();
+    if (defeatMaster) return;
+    defeatMaster = ctx.createGain();
+    defeatMaster.gain.value = 0.6;
+    defeatMaster.connect(ctx.destination);
+    playDefeatLoop();
+  }
+
+  function stopDefeatMusic() {
+    if (defeatLoopId) { clearTimeout(defeatLoopId); defeatLoopId = null; }
+    if (defeatMaster) { defeatMaster.disconnect(); defeatMaster = null; }
+  }
+
   function startAmbient() {
     if (!initialized || muted) return;
     ensureCtx();
@@ -880,7 +1450,7 @@ const Audio = (() => {
     return muted;
   }
 
-  return { init, play, startAmbient, stopAmbient, toggleMute, get muted() { return muted; } };
+  return { init, play, startAmbient, stopAmbient, startTitleMusic, stopTitleMusic, startDefeatMusic, stopDefeatMusic, toggleMute, get muted() { return muted; }, get ctx() { ensureCtx(); return ctx; } };
 })();
 
 // ============================================================
@@ -911,9 +1481,20 @@ function handleConfirm() {
 }
 
 function setupEventListeners() {
+  // Start title music on first interaction with start screen
+  let titleMusicStarted = false;
+  const startTitleMusicOnce = () => {
+    if (titleMusicStarted) return;
+    titleMusicStarted = true;
+    Audio.init();
+    Audio.startTitleMusic();
+  };
+  $('#start-screen').addEventListener('click', startTitleMusicOnce);
+
   // Start button
   $('#start-btn').addEventListener('click', () => {
-    Audio.init();
+    startTitleMusicOnce();
+    Audio.stopTitleMusic();
     startGame();
   });
 
@@ -948,6 +1529,7 @@ function setupEventListeners() {
 
   // Restart
   $('#restart-btn').addEventListener('click', () => {
+    Audio.stopDefeatMusic();
     const overlay = $('#gameover-overlay');
     overlay.classList.remove('active');
     overlay.style.display = '';
