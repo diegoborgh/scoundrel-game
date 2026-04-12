@@ -792,7 +792,7 @@ img { display: block; max-width: 100%; }
   .card.selected .card-preview { opacity: 1; }
   .btn { padding: 10px 20px; font-size: 0.88rem; }
   #action-area { gap: var(--gap-sm); }
-  .discard-mini { width: 26px; height: 36px; font-size: 0.5rem; }
+  #discard-area { display: none; }
   #game-screen { padding: var(--gap-xs) var(--gap-sm); }
 }
 
