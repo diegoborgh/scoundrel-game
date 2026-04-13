@@ -132,7 +132,7 @@ img { display: block; max-width: 100%; }
   color: var(--silver-light);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-top: -8px;
+  margin-top: 4px;
 }
 
 /* Card fan decoration */
@@ -152,7 +152,7 @@ img { display: block; max-width: 100%; }
   left: 50%;
   bottom: 0;
   transform-origin: bottom center;
-  background-image: url('assets/deck.png');
+  background-image: url('assets/deck.webp');
   background-size: cover;
   background-position: center;
   backface-visibility: hidden;

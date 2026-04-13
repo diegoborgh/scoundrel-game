@@ -28,7 +28,7 @@ Key mental model: mutate `state`, then call `renderAll()`. Rendering is not incr
 
 ### Card art
 
-Card images in [assets/](assets/) are grouped by suit and value range (e.g. `club-1.png` = low clubs, `club-3.png` = high clubs). The mapping lives in `getCardAsset()` in [game.js](game.js) — update it there if you add or rename assets.
+Card images in [assets/](assets/) are WebP, grouped by suit and value range (e.g. `club-1.webp` = low clubs, `club-3.webp` = high clubs). The mapping lives in `getCardAsset()` in [game.js](game.js) — update it there if you add or rename assets. The legacy PNG copies still sit in the folder but are no longer referenced; delete them whenever you like.
 
 ### Dev console helpers
 

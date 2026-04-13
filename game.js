@@ -28,19 +28,19 @@ const CARDS_TO_RESOLVE = 3;
 function getCardAsset(suit, value) {
   switch (suit) {
     case SUITS.HEARTS:
-      return 'assets/heart.png';
+      return 'assets/heart.webp';
     case SUITS.CLUBS:
-      if (value <= 5) return 'assets/club-1.png';
-      if (value <= 10) return 'assets/club-2.png';
-      return 'assets/club-3.png';
+      if (value <= 5) return 'assets/club-1.webp';
+      if (value <= 10) return 'assets/club-2.webp';
+      return 'assets/club-3.webp';
     case SUITS.SPADES:
-      if (value <= 5) return 'assets/spade-1.png';
-      if (value <= 10) return 'assets/spade-2.png';
-      return 'assets/spade-3.png';
+      if (value <= 5) return 'assets/spade-1.webp';
+      if (value <= 10) return 'assets/spade-2.webp';
+      return 'assets/spade-3.webp';
     case SUITS.DIAMONDS:
-      if (value <= 4) return 'assets/diamond-1.png';
-      if (value <= 7) return 'assets/diamond-2.png';
-      return 'assets/diamond-3.png';
+      if (value <= 4) return 'assets/diamond-1.webp';
+      if (value <= 7) return 'assets/diamond-2.webp';
+      return 'assets/diamond-3.webp';
     default:
       return '';
   }
